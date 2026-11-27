@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Python 知识点互动翻页学习卡 · 大学计算机（2）</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #EEF2F7;
+    color: #0F172A;
+    touch-action: pan-y;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .font-mono-code { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .card-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .card-scroll::-webkit-scrollbar { width: 4px; }
+  .card-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 99px; }
+  .slide-enter {
+    animation: slideFade 0.22s ease-out;
+  }
+  @keyframes slideFade {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .flip-card {
+    transition: all 0.18s ease;
+    cursor: pointer;
+  }
+  .flip-card:active { transform: scale(0.985); }
+</style>
+</head>
+<body class="h-[100dvh] flex flex-col items-center justify-between">
+
+<!-- Mobile-first App Frame (full screen on phone, sleek centered deck on desktop) -->
+<div class="w-full max-w-2xl h-full flex flex-col bg-white sm:my-3 sm:h-[calc(100dvh-24px)] sm:rounded-3xl sm:shadow-xl sm:border sm:border-slate-200/80 overflow-hidden relative">
+
+  <!-- TOP BAR -->
+  <header class="shrink-0 px-4 pt-3 pb-2.5 bg-white border-b border-slate-100 z-20">
+    <div class="flex items-center justify-between gap-2">
+      <button id="openDrawerBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs sm:text-sm font-semibold transition">
+        <span>☰ 目录</span>
+        <span id="topPagePill" class="font-mono-code text-blue-600">1/24</span>
+      </button>
+
+      <div id="topChapterLabel" class="text-xs font-medium text-slate-500 truncate">全书导览</div>
+
+      <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold shrink-0">
+        <span>已掌握</span>
+        <span id="masteredCount" class="font-mono-code">0/22</span>
+      </div>
+    </div>
+    <!-- Progress bar -->
+    <div class="mt-2.5 w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div id="topProgressBar" class="h-full bg-blue-600 rounded-full transition-all duration-300" style="width: 4%"></div>
+    </div>
+  </header>
+
+  <!-- MAIN PAGE STAGE (Swipeable, one card per page) -->
+  <main id="stage" class="flex-1 card-scroll px-4 sm:px-6 py-5 bg-slate-50/40 relative">
+    <!-- Rendered dynamically per page -->
+  </main>
+
+  <!-- BOTTOM PAGINATION BAR (Thumb-friendly mobile navigation) -->
+  <footer class="shrink-0 px-4 py-3 bg-white border-t border-slate-200/80 flex items-center justify-between gap-3 z-20">
+    <button id="prevPageBtn" type="button" class="flex-1 h-11 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-700 font-semibold text-sm disabled:opacity-35 transition flex items-center justify-center gap-1">
+      <span>←</span><span>上一页</span>
+    </button>
+
+    <button id="markMasteredBtn" type="button" class="h-11 px-3.5 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition shrink-0">
+      标记学会
+    </button>
+
+    <button id="nextPageBtn" type="button" class="flex-1 h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold text-sm disabled:opacity-35 shadow-sm transition flex items-center justify-center gap-1">
+      <span>下一页</span><span>→</span>
+    </button>
+  </footer>
+
+  <!-- DRAWER: CHAPTER & 22 KP QUICK JUMP -->
+  <div id="drawerBackdrop" class="hidden absolute inset-0 z-40 bg-slate-900/45 backdrop-blur-[1px] flex">
+    <div class="w-[85%] max-w-sm h-full bg-white shadow-2xl flex flex-col">
+      <div class="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <div class="font-bold text-slate-900 text-base">全书 22 个知识点目录</div>
+          <div class="text-xs text-slate-500">点击任意考点直接翻到该页</div>
+        </div>
+        <button id="closeDrawerBtn" type="button" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center font-bold">✕</button>
+      </div>
+      <div id="drawerList" class="flex-1 overflow-y-auto p-3 space-y-1.5"></div>
+    </div>
+    <div id="drawerCloseArea" class="flex-1"></div>
+  </div>
+
+</div>
+
+<script>
+const PAGES = [{"type": "cover", "id": "0", "ch": 0, "chName": "全书导览", "title": "大学计算机（2）Python 互动学习手册", "count": 550, "oos": 29, "summary": "从 133 页原版题库提炼的 6 章 22 个核心考点。支持左右滑动或底部按钮翻页，每页都配有高频避坑翻卡、互动实验和随堂小测，专为手机端复习优化。"}, {"type": "kp", "id": "1.1", "ch": 1, "chName": "第 1 章 · Python 编程基础", "title": "Python 语言特点与 IDLE 环境", "count": 17, "oos": 0, "core": ["Python 是<strong>解释型、面向对象、开源免费、高可移植性</strong>的高级编程语言（不是编译型，也不是低级语言）。", "脚本文件标准扩展名为 <code>.py</code>；在 IDLE 交互环境中，<code>>>></code> 是<strong>命令提示符</strong>。", "退出 IDLE 用 <code>exit()</code>，查询帮助文档用 <code>help()</code>，新建脚本窗口用 <code>File → New File (Ctrl+N)</code>（<code>Ctrl+O</code> 是打开文件）。"], "code": ">>> help(print)   # 查询内置帮助文档\n>>> exit()        # 退出 IDLE 交互环境", "traps": [{"q": "IDLE 只能将代码缩进 4 个空格，对吗？", "a": "错！IDLE 支持自定义缩进宽度，4 个空格只是 PEP 8 推荐习惯。"}, {"q": "Python 是编译型还是解释型语言？", "a": "解释型高级语言，支持面向对象和多种编程范式。"}], "quiz": {"q": "关于 IDLE 的说法，以下描述错误的是？", "opts": ["可以在 IDLE 内部执行 Python 命令", "具有自动输入提示功能", "具有内置调试器", "IDLE 只能将代码缩进 4 个空格"], "ans": 3, "exp": "IDLE 支持在设置中修改缩进宽度，并非只能缩进 4 个空格。"}}, {"type": "kp", "id": "1.2", "ch": 1, "chName": "第 1 章 · Python 编程基础", "title": "标识符、变量命名与保留字", "count": 20, "oos": 0, "lab": "identifier", "core": ["只能由<strong>字母、数字、下划线</strong>组成（严禁空格、<code>-</code>、<code>.</code>、<code>+</code>）。", "<strong>不能以数字开头</strong>（如 <code>40XL</code>、<code>3abc</code> 非法；<code>_2ss</code>、<code>__name__</code> 合法）。", "<strong>严格区分大小写</strong>（<code>PI</code> 与 <code>Pi</code> 不同；<code>True/False/None</code> 首字母必须大写才是保留字）。", "不能与保留字同名（如 <code>if/while/def/pass/as/raise/except</code>）；注意 <code>print/sum/self/do/function</code> 不是保留字。"], "traps": [{"q": "false（全小写）是 Python 保留字吗？", "a": "不是！保留字严格区分大小写，只有首字母大写的 False、True、None 才是保留字。"}, {"q": "self 和 __name__ 是合法标识符吗？", "a": "都是合法的！下划线开头完全合法，且 self 不是 Python 保留字。"}], "quiz": {"q": "以下哪个不是 Python 合法的标识符？", "opts": ["int32", "40XL", "self", "__name__"], "ans": 1, "exp": "40XL 以数字 4 开头，违反标识符命名规则；其余三个均合法。"}}, {"type": "kp", "id": "1.3", "ch": 1, "chName": "第 1 章 · Python 编程基础", "title": "代码规范、缩进与注释", "count": 16, "oos": 0, "core": ["Python 用<strong>缩进</strong>（而非大括号 <code>{}</code>）划分代码块，同一代码块内缩进量必须严格一致，推荐 4 个空格。", "单行注释以 <code>#</code> 开头；多行注释用三个单引号 <code>'''...'''</code> 或三个双引号 <code>\"\"\"...\"\"\"</code>。", "一行可写多条语句，用分号 <code>;</code> 分隔；长语句可用反斜杠 <code>\\</code> 续行。"], "code": "# 单行注释（注意 //、%、* 都不是注释符！）\na = 1; b = 2       # 分号分隔同行多条语句\ns = 1 + 2 + \\\n    3 + 4          # 反斜杠续行", "traps": [{"q": "代码前面加了 # 号还会执行吗？", "a": "不会！考试常把 for 循环注释掉（#for i in range(1,3):），直接跳过不执行。"}, {"q": "Python 一行最多只能写一条语句吗？", "a": "错！可以用分号 ; 在同一行分隔多条语句。"}], "quiz": {"q": "以下不可以作为 Python 注释符号的是？", "opts": ["#", "'''", "\"\"\"", "//"], "ans": 3, "exp": "// 在 Python 中是整除运算符，不是注释符（C/Java 才用 // 注释）。"}}, {"type": "kp", "id": "1.4", "ch": 1, "chName": "第 1 章 · Python 编程基础", "title": "对象模型、赋值与基础输入输出", "count": 19, "oos": 0, "core": ["Python 中<strong>一切皆对象</strong>，<code>id()</code> 获取唯一且不可变的整数标识，<code>type()</code> 获取类型；多个变量可引用同一对象。", "同步赋值 <code>a, b = b, a</code> 可直接交换变量；链式赋值 <code>x = y = 1</code> 合法，但 <code>x = (y = 2)</code> 非法。", "<code>input()</code> 永远返回<strong>字符串 (str)</strong>；<code>print()</code> 默认 <code>sep=' '</code>、<code>end='\\n'</code>。"], "code": "a, b = 3, 2\na, b = b, a                # 交换后 a=2, b=3\nprint(1, 2, 3, sep=':')    # 输出 1:2:3", "traps": [{"q": "int(input('输入:')) 能输入小数 3.14 吗？", "a": "不能！int() 只能转换整数字符串，输入实数会直接报错。"}, {"q": "print('hello') 输出带引号吗？", "a": "不带引号也不带括号，直接输出 hello。"}], "quiz": {"q": "在 Python3 中，print(1, 2, 3, sep=':') 的输出结果是？", "opts": ["123", "1 2 3", "1,2,3", "1:2:3"], "ans": 3, "exp": "sep 参数指定多个输出项之间的分隔符，因此输出 1:2:3。"}}, {"type": "kp", "id": "2.1", "ch": 2, "chName": "第 2 章 · 数据类型与基本运算", "title": "数字类型、进制与布尔运算", "count": 16, "oos": 0, "core": ["三大数字类型：<code>int</code>（整型）、<code>float</code>（浮点型）、<code>complex</code>（复数）。Python <strong>不支持 <code>char</code> 字符型</strong>和内置数组类型。", "进制前缀：二进制 <code>0b</code>、八进制 <code>0o</code>、十六进制 <code>0x</code>；<code>int('12', 8)</code> 将八进制 12 转为十进制 <code>10</code>。", "复数虚部后缀 <code>j/J</code> 均可，<code>abs(3+4j)</code> 返回模 <code>5.0</code>（float），复数不能比较大小。", "布尔值 <code>True/False</code> 参与数值运算时等价于 <code>1</code> 和 <code>0</code>。"], "code": "0o1010            # 八进制 -> 1*8^3 + 1*8 = 520\nabs(3 + 4j)       # 5.0 (float)\n100 * False > -1  # 0 > -1 -> True", "traps": [{"q": "from math import sqrt; sqrt(3)*sqrt(3) == 3 结果是 True 吗？", "a": "是 False！浮点数在计算机中存在二进制存储精度误差。"}, {"q": "Python 浮点数的小数部分可以为 0 吗？", "a": "可以！如 3.0 也是合法浮点数。"}], "quiz": {"q": "Python 不支持的数据类型是？", "opts": ["char", "int", "float", "complex"], "ans": 0, "exp": "Python 没有单独的 char 字符类型，单个字符也是长度为 1 的字符串 str。"}}, {"type": "kp", "id": "2.2", "ch": 2, "chName": "第 2 章 · 数据类型与基本运算", "title": "运算符、优先级与表达式", "count": 44, "oos": 2, "core": ["算术运算：<code>**</code> 幂运算最高；<code>/</code> 永得 float；<code>//</code> 向下整除（遇浮点得 float，如 <code>3.0//2 == 1.0</code>）；<code>%</code> 取余。", "复合赋值右侧整体先算：<code>x *= a + b</code> 等价于 <code>x = x * (a + b)</code>。", "支持链式比较 <code>1 < a < 5</code>；不等于写作 <code>!=</code>；<code>>></code> 是按位右移。", "逻辑优先级：<code>not</code> > <code>and</code> > <code>or</code>。"], "code": "x = 2\nx *= 3 + 5**2    # 先算 3+25=28，再 2*28=56\n# 两位数 x 交换个位与十位：\n(x % 10) * 10 + x // 10", "traps": [{"q": "输入 x='10', y='9'（未转 int），x > y 结果是？", "a": "False！字符串按字典序逐位比 ASCII 码，'1' < '9'。"}, {"q": "3.0 // 2 的结果是 1 还是 1.0？", "a": "1.0！只要整除运算中有一方是浮点数，结果就是 float。"}], "quiz": {"q": "已知 x = 2, y = 3，执行 x *= y + 5 后，x 的值为？", "opts": ["11", "16", "13", "26"], "ans": 1, "exp": "复合赋值等价于 x = x * (y + 5) = 2 * (3 + 5) = 16。"}}, {"type": "kp", "id": "2.3", "ch": 2, "chName": "第 2 章 · 数据类型与基本运算", "title": "字符串、转义与格式化输出", "count": 22, "oos": 1, "lab": "slice", "core": ["字符串支持 <code>+</code> 拼接和 <code>*</code> 重复，但不能直接与数字相加（<code>'foo'+2</code> 报错）。转义字符以 <code>\\</code> 开头（<code>\\n</code> 换行）。", "切片 <code>s[start:end:step]</code> 遵循<strong>含左不含右</strong>，步长为 <code>-1</code>（<code>s[::-1]</code>）实现字符串逆序。", "格式化：<code>%08.2f</code> 表示总宽 8 位补 0、2 位小数；<code>{0:*^10}.format(s)</code> 中 <code>&lt; &gt; ^</code> 分别表示左/右/居中对齐，前面字符为填充符。", "<code>eval()</code> 去掉外层引号并求值：<code>eval('1' + '1')</code> 先拼接成 <code>'11'</code> 再求值得 <code>11</code>。"], "traps": [{"q": "s='sport'; n=len(s)，为什么 s[n/2] 会报错？", "a": "因为 / 是浮点除法（5/2=2.5），索引必须是整数，应写 s[n//2]。"}, {"q": "len('hello python') 是 11 还是 12？", "a": "12！中间的空格也算 1 个字符。"}], "quiz": {"q": "s = 'python'，'{0:*^10}'.format(s) 的运行结果是？", "opts": ["python", "python^^^^", "**python**", "****python"], "ans": 2, "exp": "^ 表示居中对齐，总宽 10，python 占 6 位，左右各用 * 补齐 2 位，得 **python**。"}}, {"type": "kp", "id": "2.4", "ch": 2, "chName": "第 2 章 · 数据类型与基本运算", "title": "列表、元组与序列通用操作", "count": 35, "oos": 3, "core": ["<strong>列表 <code>[...]</code> 可变</strong>，<strong>元组 <code>(...)</code> 不可变</strong>；均支持正负索引、切片、<code>in/not in</code> 和 <code>len()</code>。", "列表常用方法：<code>append(x)</code> 末尾追加单个元素、<code>extend()</code> 逐个扩展、<code>insert(i, x)</code> 指定位置插入、<code>remove(v)</code> 按值删首个、<code>del x[i]</code> 按索引删、<code>reverse()</code> 原地反转。<strong>列表没有 <code>add()</code> 方法！</strong>", "<strong>单元素元组必须加逗号</strong>：<code>(3,)</code> 是元组，<code>(3)</code> 只是整数 3。"], "code": "i = j = []\ni.append(1)       # 共享同一对象引用！\nprint(i, j)       # 输出 [1] [1]\n\nx = [1, 2, 3]\nx.insert(1, 4)    # -> [1, 4, 2, 3]", "traps": [{"q": "numbers=[1,2,3,4]; numbers.append([5,6,7,8]) 后 len(numbers) 是几？", "a": "5！append 把整个列表当作 1 个嵌套元素追加到末尾。"}, {"q": "[1, 2, 3] * 3 的结果是 [3, 6, 9] 吗？", "a": "错！序列乘法是重复拼接，结果为 [1, 2, 3, 1, 2, 3, 1, 2, 3]。"}], "quiz": {"q": "以下哪种不是 Python 元组的定义方式？", "opts": ["(1)", "(1,)", "(1, 2)", "(1, 2, (3, 4))"], "ans": 0, "exp": "单元素元组必须在元素后加逗号，(1) 仅表示普通圆括号包裹的整数 1。"}}, {"type": "kp", "id": "2.5", "ch": 2, "chName": "第 2 章 · 数据类型与基本运算", "title": "字典与集合（含超纲考点）", "count": 8, "oos": 4, "core": ["字典用 <code>{键: 值}</code> 表示，空字典为 <code>{}</code>；字典的<strong>键必须是不可变对象</strong>（数字/字符串/元组可以，列表不可做键）。", "若字典中出现重复键，<strong>后赋的值覆盖前值</strong>。", "常用操作：<code>d[key]</code> 取值、<code>update()</code> 合并、<code>keys()</code> 获取键视图（非值视图）、<code>clear()</code> 清空、<code>del</code> 删除、<code>len()</code> 算键值对个数。", "超纲了解：<code>set([1,2,2,3,3,3,4])</code> 创建集合并自动去重为 <code>{1,2,3,4}</code>。"], "code": "d = {'a': 1, 'b': 2, 'b': '3'}\nprint(d['b'])   # 输出 '3'（后值覆盖前值）", "traps": [{"q": "dict = {[1,2,3]: 'uestc'} 合法吗？", "a": "非法！列表是可变对象，不能作为字典的键；元组 (1,2,3) 可以。"}], "quiz": {"q": "以下关于字典操作的描述，错误的是？", "opts": ["del 用于删除字典或者元素", "clear 用于清空字典中的数据", "len 可以计算字典中键值对的个数", "keys 方法可以获取字典的值视图"], "ans": 3, "exp": "keys() 获取的是键（key）视图，获取值视图应用 values()。"}}, {"type": "kp", "id": "3.1", "ch": 3, "chName": "第 3 章 · 程序控制结构与异常处理", "title": "基本控制结构与条件分支", "count": 49, "oos": 0, "core": ["结构化程序设计只有 <strong>3 种基本控制结构</strong>：顺序结构、选择（分支）结构、循环结构（没有 <code>goto</code>，也没有 <code>switch-case</code>）。", "<code>if / elif / else</code> 后必须加冒号 <code>:</code>，用缩进界定分支块；<code>elif</code> 不能单独使用；<code>pass</code> 是空占位语句。", "多分支 <code>if-elif-else</code> 只要命中第一个 <code>True</code> 就不再检查后续分支。"], "code": "score = 75\nif score >= 60:   grade = 'D'  # 已命中！\nelif score >= 70: grade = 'C'  # 不会再执行\nprint(grade)                   # 输出 D", "traps": [{"q": "s = input('输入:'); if s >= 5: 运行会怎样？", "a": "报错（TypeError）！input() 返回字符串，不能直接与数字 5 比较大小。"}], "quiz": {"q": "以下关于 Python 控制结构的说法，错误的是？", "opts": ["每个 if 条件后要使用冒号 (:)", "Python 中没有 switch-case 语句", "elif 可以单独使用", "pass 是空语句，一般用作占位"], "ans": 2, "exp": "elif 必须依附于前面的 if 语句，不能单独使用。"}}, {"type": "kp", "id": "3.2", "ch": 3, "chName": "第 3 章 · 程序控制结构与异常处理", "title": "for 循环与 range() 迭代", "count": 46, "oos": 0, "core": ["<code>for 变量 in 可迭代对象:</code> 可遍历字符串、列表、字典（遍历键）和 <code>range(start, stop, step)</code>。", "<code>range</code> 永远<strong>含左不含右</strong>：<code>range(5)</code> 是 0~4；<code>range(1,5)</code> 是 1~4；<code>range(6,-1,-1)</code> 是 6 到 0。", "读循环题盯紧两点：① 累加/累乘初值类型（<code>sum=1.0</code> 结果是 float）；② <code>print()</code> 缩进在循环内还是循环外。"], "code": "m = 1\nfor x in range(1, 5):\n    m *= x       # 1*1*2*3*4 = 24\nprint(m)         # 在循环外，只输出一次 24", "traps": [{"q": "执行 for i in range(10): 后，i 的终值是多少？", "a": "9！range(10) 生成 0 到 9，不含 10。"}], "quiz": {"q": "sum = 1.0; for num in range(1, 4): sum += num; print(sum) 输出是？", "opts": ["6", "7", "1.0", "7.0"], "ans": 3, "exp": "range(1,4) 为 1,2,3，累加到浮点初值 1.0 上得 7.0。"}}, {"type": "kp", "id": "3.3", "ch": 3, "chName": "第 3 章 · 程序控制结构与异常处理", "title": "while 循环与次数分析", "count": 13, "oos": 0, "lab": "while_div", "core": ["<code>while 条件:</code> 适合未知次数的条件循环；条件恒真且无 <code>break</code> 会死循环。", "题库最经典双胞胎：<code>k=1000; while k>1:</code> 中，用 <code>k = k/2</code> 执行 <strong>10 次</strong>，用 <code>k = k//2</code> 只执行 <strong>9 次</strong>！点击下方实验亲自走一遍。", "数字逆序模板：<code>while n > 0: s = s*10 + n%10; n //= 10</code>，输入 <code>1010</code> 输出 <code>101</code>。"], "traps": [{"q": "为什么 k=k/2 比 k=k//2 多循环 1 次？", "a": "第 9 次后，整除 k 刚好变成 1（结束）；而浮点除法是 1.953125 > 1，还会再执行第 10 次！"}], "quiz": {"q": "k = 1000; while k > 1: print(k); k = k // 2，循环执行次数是？", "opts": ["9", "10", "11", "100"], "ans": 0, "exp": "整除依次为 500, 250, 125, 62, 31, 15, 7, 3, 1，共执行 9 次后 k==1 终止。"}}, {"type": "kp", "id": "3.4", "ch": 3, "chName": "第 3 章 · 程序控制结构与异常处理", "title": "break、continue 与循环 else", "count": 38, "oos": 0, "core": ["<code>break</code>：立即跳出<strong>当前所在的一层</strong>循环（嵌套循环只跳出最内层）。", "<code>continue</code>：仅跳过<strong>本次迭代</strong>剩余语句，直接开始下一轮循环（不是结束整个循环！）。", "<code>for...else</code>：<strong>只有循环正常结束（未被 break 打断）才执行 else</strong>；触发了 break 就不执行 else。"], "code": "s = 0\nfor i in range(1, 100):\n    s += i\nelse:\n    print(1)   # 没有 break，正常结束 -> 输出 1", "traps": [{"q": "continue 能跳出当前循环吗？", "a": "不能！continue 只是结束“本次”循环进入下一轮，跳出循环靠 break。"}], "quiz": {"q": "for s in 'HelloWorld': if s=='W': continue; print(s, end='') 输出是？", "opts": ["Hello", "World", "HelloWorld", "Helloorld"], "ans": 3, "exp": "遇到 'W' 时 continue 跳过打印，其余字符正常输出，得 Helloorld。"}}, {"type": "kp", "id": "3.5", "ch": 3, "chName": "第 3 章 · 程序控制结构与异常处理", "title": "异常处理机制（含超纲考点）", "count": 3, "oos": 1, "core": ["Python 使用 <code>try - except (- else - finally)</code> 捕获运行时异常。", "允许使用 <code>raise</code> 语句由程序主动引发异常；<code>try</code> 中可同时有 <code>except</code> 和 <code>finally</code>。", "访问不存在的列表索引会引发 <code>IndexError</code>（不是 <code>NameError</code>）。"], "traps": [{"q": "try 语句中有 except 就不能有 finally，对吗？", "a": "错！finally 无论是否发生异常都会执行，可与 except 同时使用。"}], "quiz": {"q": "以下哪组关键字用于表示异常处理？", "opts": ["try - except", "for - in", "if - else", "break - continue"], "ans": 0, "exp": "try - except 是 Python 异常捕获的标准关键字组合。"}}, {"type": "kp", "id": "4.1", "ch": 4, "chName": "第 4 章 · 函数与模块", "title": "函数定义、调用与 return 返回值", "count": 31, "oos": 2, "core": ["使用 <code>def 函数名(形参):</code> 定义函数，主要目的是<strong>代码复用和模块化</strong>；必须先定义后调用。", "Python 代码<strong>不依赖 <code>main()</code> 函数</strong>作为入口，直接从顶层无缩进语句开始执行。", "函数可以没有 <code>return</code>，此时默认返回空值 <code>None</code>；<code>return</code> 一旦执行函数立即结束；可一次返回多个值（本质是元组）。"], "code": "def exchange(a, b):\n    return (b, a)\nx, y = exchange(10, 20)  # x=20, y=10", "traps": [{"q": "没有 return 语句的函数返回值是 True 还是 None？", "a": "None！Python 中无 return 或空 return 都默认返回 None。"}], "quiz": {"q": "以下关于 Python 函数的说法，正确的是？", "opts": ["定义函数必须指定返回值类型", "函数中必须包含 return 语句", "return 语句一定能执行到", "没有 return 时默认返回空值 None"], "ans": 3, "exp": "Python 是动态类型语言，不需指定返回类型，无 return 时默认返回 None。"}}, {"type": "kp", "id": "4.2", "ch": 4, "chName": "第 4 章 · 函数与模块", "title": "函数参数类型与传递机制", "count": 33, "oos": 2, "lab": "scope", "core": ["定义时为<strong>形参</strong>（可省略），调用时为<strong>实参</strong>；支持位置参数、默认参数、关键字参数和可变长参数 <code>*args</code>。", "语法铁律：<strong>必选参数在前，默认参数在后</strong>（<code>def f(a=1, b):</code> 报错）。", "<strong>传对象引用：</strong>传入不可变对象（数字/字符串/元组）在函数内重新赋值<strong>不改变</strong>外部原值；传入可变对象（列表/字典）原地修改（如 <code>a[0]=3</code>）<strong>会改变</strong>外部原值！"], "traps": [{"q": "def swap(a, b): a, b = b, a 能交换外部的两个整数吗？", "a": "不能！整数不可变，函数内改形参不影响外部实参；必须用 return 返回新值。"}], "quiz": {"q": "def Sum(a, b=3, c=5): return sum([a, b, c])，调用 Sum(a=8, c=2) 返回？", "opts": ["16", "13", "15", "10"], "ans": 1, "exp": "a=8、c=2 覆盖默认值，b 取默认值 3，合计 8+3+2 = 13。"}}, {"type": "kp", "id": "4.3", "ch": 4, "chName": "第 4 章 · 函数与模块", "title": "变量作用域与 global 声明", "count": 24, "oos": 3, "core": ["<strong>局部变量</strong>只在函数内部有效，退出函数后销毁；与全局变量同名时会<strong>屏蔽</strong>全局变量。", "<strong>全局变量</strong>在函数外定义，函数内可以直接读取；但若要在函数内<strong>修改</strong>全局变量，必须先写 <code>global 变量名</code>，否则报 <code>UnboundLocalError</code>！"], "code": "x = 1\ndef change():\n    global x     # 不加这行直接写 x += 1 会报错！\n    x += 1\nchange()\nprint(x)         # 输出 2", "traps": [{"q": "a=10; def f(): a=100; f(); print(a) 输出几？", "a": "10！函数内未声明 global，a=100 创建的是局部变量，不影响全局 a。"}], "quiz": {"q": "x = 1; def change(): x += 1; print(x); change() 的运行结果是？", "opts": ["1", "2", "3", "报错"], "ans": 3, "exp": "函数内试图修改全局变量 x 却未用 global 声明，会触发 UnboundLocalError。"}}, {"type": "kp", "id": "4.4", "ch": 4, "chName": "第 4 章 · 函数与模块", "title": "模块导入、标准库与 lambda", "count": 19, "oos": 2, "core": ["导入写法：<code>import math</code>、<code>import turtle as t</code>、<code>from math import sqrt</code>（绝不能写反为 <code>from sqrt import math</code>）。", "<code>random.random()</code> 生成 <code>[0, 1)</code> 随机小数；<code>random.randint(m, n)</code> 生成<strong>闭区间 <code>[m, n]</code></strong> 随机整数。", "超纲了解：<code>lambda</code> 用于定义单行匿名函数；<code>all([1, True, True])</code> 判断所有元素为真返回 <code>True</code>。"], "code": "from math import sqrt\nsqrt(3*3 + 4*4)      # 5.0 (float)\nrandom.randint(1, 6) # 可能取到 1 和 6（闭区间）", "traps": [{"q": "random.randint(m, n) 包含端点 n 吗？", "a": "包含！randint 是闭区间 [m, n]，和 range 左闭右开不一样，最容易混淆！"}], "quiz": {"q": "引用 math 模块中 sqrt 函数的导入语句，错误的是？", "opts": ["import math", "from math import sqrt", "from sqrt import math", "from math import *"], "ans": 2, "exp": "应为 from 模块名 import 函数名，C 选项把模块名和函数名写反了。"}}, {"type": "kp", "id": "5.1", "ch": 5, "chName": "第 5 章 · 常用算法设计策略", "title": "算法特征、枚举/递推/分治/贪心", "count": 21, "oos": 1, "core": ["算法五大特征：<strong>有穷性（运行时间有限）、确定性、可行性、输入和输出</strong>（不含无穷性）。复杂度指<strong>时间复杂度和空间复杂度</strong>。", "<strong>枚举法：</strong>循环列举全部可能并判断（百钱买百鸡、密码锁 000–999 试密、求 1–1000 中 7/17 的倍数）。", "<strong>递推法：</strong>按公式逐步顺推/逆推（猴子吃桃 <code>x=(x+1)*2</code>、逆推初始体重）。", "<strong>分治法：</strong>拆成独立子问题分别求解再合并（试卷分三份同时找）；<strong>贪心法</strong>（超纲）：局部最优求全局最优。"], "traps": [{"q": "猴子吃桃问题用的是枚举法还是递推法？", "a": "递推法！已知最后一天剩 1 个，按 x=(x+1)*2 逆推前一天。"}], "quiz": {"q": "以下哪项不属于算法的基本特征？", "opts": ["可行性", "确定性", "输入和输出", "无穷性"], "ans": 3, "exp": "算法必须具有有穷性（在有限步骤和时间内结束），不能无穷执行。"}}, {"type": "kp", "id": "5.2", "ch": 5, "chName": "第 5 章 · 常用算法设计策略", "title": "递归原理与经典递归追踪", "count": 39, "oos": 1, "lab": "recursion", "core": ["函数直接或间接调用自身称为<strong>递归</strong>（向下调用为递归过程，向上返回为回溯过程），经典代表是<strong>汉诺塔</strong>、阶乘、斐波那契。", "递归<strong>必须有明确的边界出口（基例）</strong>，且<strong>可以有多个基例</strong>。", "Python 默认最大递归深度为 <strong>1000 层</strong>；递归代码简洁但通常<strong>执行效率低于递推</strong>。"], "traps": [{"q": "每个递归函数只能有一个基例，对吗？", "a": "错！可以有多个基例（例如 fib 中 n==1 和 n==2）。"}, {"q": "递归调用层数越深，运行时间越短吗？", "a": "错！层数越深，栈开销越大、耗时越长，超过 1000 层会报错。"}], "quiz": {"q": "def age(n): return 10 if n==1 else age(n-1)+2，print(age(3)) 输出是？", "opts": ["10", "12", "14", "16"], "ans": 2, "exp": "age(3) = age(2)+2 = age(1)+2+2 = 10+4 = 14。"}}, {"type": "kp", "id": "6.1", "ch": 6, "chName": "第 6 章 · 图形界面与图形绘制", "title": "turtle 海龟绘图库", "count": 26, "oos": 2, "lab": "turtle", "core": ["<strong>运动命令：</strong><code>forward(d)/fd(d)</code> 前进、<code>backward/bk</code> 后退、<code>left/right</code> 左右转、<code>seth(ang)</code> 绝对朝向、<code>speed()</code> 画笔速度。", "<strong>画笔与窗口：</strong><code>pensize()</code> 笔宽、<code>pencolor()</code> 颜色（<code>'grey'</code> 或 <code>'#BEBEBE'</code>）、<code>clear()</code> 清空（非运动命令）、<code>reset()</code> 恢复设置、<code>undo()</code> 撤销。", "<code>circle(radius, extent, steps)</code>：第一参数是半径，第二参数是角度，<code>steps=3</code> 画内接正三角形。"], "traps": [{"q": "写了 from turtle import * 后再写 turtle.forward(60) 会怎样？", "a": "运行出错（NameError）！用 from ... import * 时必须直接写 forward(60)。"}], "quiz": {"q": "turtle.circle(50, steps=3) 的运行效果是？", "opts": ["画半径 50 的圆", "画直径 50 的圆", "分三步画圆", "绘制一个正三角形"], "ans": 3, "exp": "steps=3 表示用 3 条线段近似内接正多边形，即绘制一个等边三角形。"}}, {"type": "kp", "id": "6.2", "ch": 6, "chName": "第 6 章 · 图形界面与图形绘制", "title": "tkinter 与 GUI 编程基础", "count": 11, "oos": 5, "core": ["<strong>GUI</strong> 全称 <strong>Graphical User Interface</strong>（图形用户界面）。Python 标准内置 GUI 库是 <strong><code>tkinter</code></strong>。", "<code>window = Tk(); window.mainloop()</code> 创建并显示一个空白窗口；<code>Canvas</code> 是画布控件。", "超纲了解：三种几何布局管理为 <code>pack()</code>、<code>grid()</code>、<code>place()</code>（不含 <code>menu</code>）；其他 GUI 库有 <code>wxPython</code>、<code>PyQt5</code>（<code>turtle</code> 属于绘图库）。"], "traps": [{"q": "tkinter、wxPython、PyQt5、turtle 哪个不属于 GUI 开发工具？", "a": "turtle！它是海龟绘图库，不是 GUI 界面库。"}], "quiz": {"q": "tkinter 提供的画布控件是？", "opts": ["Button", "Canvas", "Label", "Frame"], "ans": 1, "exp": "Canvas 是画布控件，用于绘制线条、图形和图像。"}}, {"type": "cheatsheet", "id": "速查", "ch": 7, "chName": "考前速查", "title": "考前 3 分钟必背速查卡", "count": 0, "oos": 0}];
+const STORE_KEY = 'py_study_deck_v1';
+
+let state = {
+  idx: 0,
+  mastered: [], // ['1.1', ...]
+  quizAns: {}   // { '1.1': 3 }
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) state = { ...state, ...JSON.parse(raw) };
+    if (state.idx < 0 || state.idx >= PAGES.length) state.idx = 0;
+  } catch (e) {}
+}
+function saveState() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ==================== INTERACTIVE MINI-LABS ====================
+function renderLabHtml(labType) {
+  if (labType === 'identifier') {
+    return `
+      <div class="rounded-2xl bg-indigo-50/80 border border-indigo-200/80 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-indigo-800">⚡ 互动实验：变量名合法性实时检测器</span>
+        </div>
+        <div class="flex gap-2">
+          <input id="labIdInput" type="text" value="40XL" placeholder="输入变量名试试..." class="flex-1 px-3 py-2 rounded-xl border border-indigo-200 bg-white font-mono-code text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          ${['40XL','_name','my-score','True','false','self','N.x','a_123'].map(v =>
+            `<button type="button" data-id-preset="${v}" class="id-preset-btn px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-xs font-mono-code text-slate-700 hover:bg-indigo-100">${v}</button>`
+          ).join('')}
+        </div>
+        <div id="labIdResult" class="text-xs sm:text-sm font-medium rounded-xl p-3 bg-white border"></div>
+      </div>`;
+  }
+  if (labType === 'slice') {
+    return `
+      <div class="rounded-2xl bg-blue-50/80 border border-blue-200/80 p-4 space-y-3">
+        <div class="text-xs font-bold text-blue-800">⚡ 互动实验：字符串切片可视化 s = "abcdefg"</div>
+        <div id="sliceChars" class="grid grid-cols-7 gap-1 text-center font-mono-code"></div>
+        <div class="flex flex-wrap gap-1.5">
+          ${[
+            ['s[0:3]', 0, 3, 1],
+            ['s[1:5]', 1, 5, 1],
+            ['s[::2]', 0, 7, 2],
+            ['s[::-1]', null, null, -1],
+            ['s[-3:]', 4, 7, 1]
+          ].map((p, i) =>
+            `<button type="button" data-slice-idx="${i}" class="slice-btn px-2.5 py-1.5 rounded-lg bg-white border border-blue-200 text-xs font-mono-code font-semibold text-blue-800 hover:bg-blue-100">${p[0]}</button>`
+          ).join('')}
+        </div>
+        <div id="sliceOut" class="text-xs sm:text-sm font-mono-code bg-slate-900 text-emerald-400 rounded-xl px-3.5 py-2.5"></div>
+      </div>`;
+  }
+  if (labType === 'while_div') {
+    return `
+      <div class="rounded-2xl bg-amber-50/80 border border-amber-200/80 p-4 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold text-amber-900">⚡ 互动实验：看懂 k=k/2 (10次) vs k=k//2 (9次)</span>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" id="wdBtnFloat" class="flex-1 py-2 rounded-xl text-xs font-mono-code font-bold border transition">k = k / 2（浮点除）</button>
+          <button type="button" id="wdBtnFloor" class="flex-1 py-2 rounded-xl text-xs font-mono-code font-bold border transition">k = k // 2（整除）</button>
+        </div>
+        <div id="wdSteps" class="flex flex-wrap gap-1.5 text-xs font-mono-code"></div>
+        <div id="wdSummary" class="text-xs font-semibold text-amber-900 bg-white rounded-xl p-2.5 border border-amber-200"></div>
+      </div>`;
+  }
+  if (labType === 'scope') {
+    return `
+      <div class="rounded-2xl bg-violet-50/80 border border-violet-200/80 p-4 space-y-3">
+        <div class="text-xs font-bold text-violet-900">⚡ 互动对比：不可变(int) vs 可变(list) 传参</div>
+        <div class="flex gap-2">
+          <button type="button" id="scBtnInt" class="flex-1 py-2 rounded-xl text-xs font-semibold border transition">传入整数 x = 2</button>
+          <button type="button" id="scBtnList" class="flex-1 py-2 rounded-xl text-xs font-semibold border transition">传入列表 y = [2]</button>
+        </div>
+        <pre id="scCode" class="font-mono-code text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto"></pre>
+        <div id="scResult" class="text-xs sm:text-sm font-semibold rounded-xl p-2.5 bg-white border border-violet-200"></div>
+      </div>`;
+  }
+  if (labType === 'recursion') {
+    return `
+      <div class="rounded-2xl bg-teal-50/80 border border-teal-200/80 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-teal-900">⚡ 互动实验：阶乘递归 fact(4) 逐步展开与回溯</span>
+          <button type="button" id="recStepBtn" class="px-3 py-1 rounded-lg bg-teal-600 text-white text-xs font-semibold hover:bg-teal-700">下一步 ▶</button>
+        </div>
+        <div id="recLog" class="space-y-1.5 font-mono-code text-xs"></div>
+      </div>`;
+  }
+  if (labType === 'turtle') {
+    return `
+      <div class="rounded-2xl bg-sky-50/80 border border-sky-200/80 p-4 space-y-3">
+        <div class="text-xs font-bold text-sky-900">⚡ 互动实验：点击按钮看小海龟现场画图</div>
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" data-turtle="tri" class="t-btn px-2.5 py-1.5 rounded-lg bg-white border border-sky-200 text-xs font-semibold text-sky-900 hover:bg-sky-100">正三角形 (left 120°)</button>
+          <button type="button" data-turtle="sq" class="t-btn px-2.5 py-1.5 rounded-lg bg-white border border-sky-200 text-xs font-semibold text-sky-900 hover:bg-sky-100">正方形 (left 90°)</button>
+          <button type="button" data-turtle="rect" class="t-btn px-2.5 py-1.5 rounded-lg bg-white border border-sky-200 text-xs font-semibold text-sky-900 hover:bg-sky-100">长方形 (50×60)</button>
+          <button type="button" data-turtle="arc" class="t-btn px-2.5 py-1.5 rounded-lg bg-white border border-sky-200 text-xs font-semibold text-sky-900 hover:bg-sky-100">半圆 circle(r,180)</button>
+        </div>
+        <div class="bg-white rounded-xl border border-sky-200 p-2 flex flex-col items-center">
+          <canvas id="turtleCanvas" width="280" height="150" class="max-w-full"></canvas>
+          <div id="turtleCaption" class="text-xs font-mono-code text-slate-600 mt-1">点击上方按钮开始绘制</div>
+        </div>
+      </div>`;
+  }
+  return '';
+}
+
+function bindLabEvents(labType) {
+  if (labType === 'identifier') {
+    const keywords = new Set(['False','None','True','and','as','assert','async','await','break','class','continue','def','del','elif','else','except','finally','for','from','global','if','import','in','is','lambda','nonlocal','not','or','pass','raise','return','try','while','with','yield']);
+    const input = document.getElementById('labIdInput');
+    const out = document.getElementById('labIdResult');
+    const check = (val) => {
+      if (!val) { out.className='text-xs sm:text-sm font-medium rounded-xl p-3 bg-white border border-slate-200 text-slate-500'; out.textContent='请输入一个标识符进行检测'; return; }
+      if (keywords.has(val)) {
+        out.className='text-xs sm:text-sm font-medium rounded-xl p-3 bg-rose-50 border border-rose-200 text-rose-800';
+        out.textContent = `✗ 非法：“${val}” 是 Python 保留字（关键字），不能用作变量名。`;
+      } else if (/^[0-9]/.test(val)) {
+        out.className='text-xs sm:text-sm font-medium rounded-xl p-3 bg-rose-50 border border-rose-200 text-rose-800';
+        out.textContent = `✗ 非法：“${val}” 以数字开头，标识符不能以数字开头。`;
+      } else if (!/^[A-Za-z_\u4e00-\u9fa5][A-Za-z0-9_\u4e00-\u9fa5]*$/.test(val)) {
+        out.className='text-xs sm:text-sm font-medium rounded-xl p-3 bg-rose-50 border border-rose-200 text-rose-800';
+        out.textContent = `✗ 非法：“${val}” 包含非法符号（如空格、减号、点号等）。`;
+      } else {
+        out.className='text-xs sm:text-sm font-medium rounded-xl p-3 bg-emerald-50 border border-emerald-200 text-emerald-800';
+        out.textContent = `✓ 合法：“${val}” 完全符合 Python 标识符命名规则！`;
+      }
+    };
+    input.addEventListener('input', () => check(input.value.trim()));
+    document.querySelectorAll('.id-preset-btn').forEach(b => {
+      b.addEventListener('click', () => { input.value = b.dataset.idPreset; check(input.value); });
+    });
+    check(input.value);
+  }
+  else if (labType === 'slice') {
+    const str = 'abcdefg';
+    const presets = [
+      { expr: 's[0:3]', idxs: [0,1,2], res: "'abc'（索引 0,1,2，不含 3）" },
+      { expr: 's[1:5]', idxs: [1,2,3,4], res: "'bcde'（索引 1~4，不含 5）" },
+      { expr: 's[::2]', idxs: [0,2,4,6], res: "'aceg'（步长 2，隔一个取一个）" },
+      { expr: 's[::-1]', idxs: [6,5,4,3,2,1,0], res: "'gfedcba'（步长 -1，从右往左逆序）" },
+      { expr: 's[-3:]', idxs: [4,5,6], res: "'efg'（倒数第 3 个到末尾）" }
+    ];
+    const renderSlice = (pi) => {
+      const p = presets[pi];
+      const box = document.getElementById('sliceChars');
+      box.innerHTML = str.split('').map((ch, idx) => {
+        const hit = p.idxs.includes(idx);
+        return `<div class="rounded-lg py-1.5 border ${hit ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-slate-500 border-slate-200'}">
+          <div class="text-sm">${ch}</div>
+          <div class="text-[10px] ${hit ? 'text-blue-100' : 'text-slate-400'}">${idx} / ${idx-7}</div>
+        </div>`;
+      }).join('');
+      document.getElementById('sliceOut').textContent = `${p.expr}  =>  ${p.res}`;
+    };
+    document.querySelectorAll('.slice-btn').forEach(b => {
+      b.addEventListener('click', () => renderSlice(Number(b.dataset.sliceIdx)));
+    });
+    renderSlice(0);
+  }
+  else if (labType === 'while_div') {
+    const showMode = (isFloor) => {
+      document.getElementById('wdBtnFloat').className = 'flex-1 py-2 rounded-xl text-xs font-mono-code font-bold border transition ' +
+        (!isFloor ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-900 border-amber-200');
+      document.getElementById('wdBtnFloor').className = 'flex-1 py-2 rounded-xl text-xs font-mono-code font-bold border transition ' +
+        (isFloor ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-900 border-amber-200');
+      let k = 1000, steps = [];
+      while (k > 1 && steps.length < 15) {
+        k = isFloor ? Math.floor(k / 2) : k / 2;
+        steps.push(isFloor ? k : Number(k.toFixed(3)));
+      }
+      document.getElementById('wdSteps').innerHTML = steps.map((v, i) =>
+        `<span class="px-2 py-1 rounded-lg bg-white border border-amber-200 text-slate-800">第${i+1}次: <b>${v}</b></span>`
+      ).join('');
+      document.getElementById('wdSummary').textContent = isFloor
+        ? `整除共执行 9 次：第 9 次后 k 变为 1，不满足 k > 1 立即终止！`
+        : `浮点除共执行 10 次：第 9 次后 k=1.953 仍 > 1，还会再执行第 10 次变为 0.977 才终止！`;
+    };
+    document.getElementById('wdBtnFloat').addEventListener('click', () => showMode(false));
+    document.getElementById('wdBtnFloor').addEventListener('click', () => showMode(true));
+    showMode(false);
+  }
+  else if (labType === 'scope') {
+    const show = (isList) => {
+      document.getElementById('scBtnInt').className = 'flex-1 py-2 rounded-xl text-xs font-semibold border transition ' +
+        (!isList ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-violet-900 border-violet-200');
+      document.getElementById('scBtnList').className = 'flex-1 py-2 rounded-xl text-xs font-semibold border transition ' +
+        (isList ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-violet-900 border-violet-200');
+      document.getElementById('scCode').textContent = isList
+        ? "def test2(a):\n    a[0] = 3      # 原地修改列表元素\ny = [2]\ntest2(y)\nprint(y)"
+        : "def test1(a):\n    a = 3         # 形参指向新整数对象\nx = 2\ntest1(x)\nprint(x)";
+      document.getElementById('scResult').textContent = isList
+        ? "输出结果：[3]  →  列表是可变对象，原地修改会直接影响函数外的 y！"
+        : "输出结果：2    →  整数是不可变对象，函数内给形参重新赋值不影响外部 x！";
+    };
+    document.getElementById('scBtnInt').addEventListener('click', () => show(false));
+    document.getElementById('scBtnList').addEventListener('click', () => show(true));
+    show(false);
+  }
+  else if (labType === 'recursion') {
+    const frames = [
+      "① 调用 fact(4) → 等待 4 * fact(3)",
+      "② 调用 fact(3) → 等待 3 * fact(2)",
+      "③ 调用 fact(2) → 等待 2 * fact(1)",
+      "④ 调用 fact(1) → 等待 1 * fact(0)",
+      "⑤ 到达基例 fact(0) == 1！（停止向下，开始回溯）",
+      "⑥ 回溯：fact(1)=1 → fact(2)=2 → fact(3)=6 → fact(4)=24 ✓"
+    ];
+    let step = 1;
+    const renderLog = () => {
+      document.getElementById('recLog').innerHTML = frames.slice(0, step).map((line, i) =>
+        `<div class="px-3 py-1.5 rounded-lg ${i === 4 ? 'bg-amber-100 text-amber-900 font-bold' : i === 5 ? 'bg-emerald-100 text-emerald-900 font-bold' : 'bg-white text-slate-700 border border-teal-100'}">${line}</div>`
+      ).join('');
+      document.getElementById('recStepBtn').textContent = step >= frames.length ? '重播 ↺' : `下一步 (${step}/${frames.length}) ▶`;
+    };
+    document.getElementById('recStepBtn').addEventListener('click', () => {
+      step = step >= frames.length ? 1 : step + 1;
+      renderLog();
+    });
+    renderLog();
+  }
+  else if (labType === 'turtle') {
+    const canvas = document.getElementById('turtleCanvas');
+    const ctx = canvas.getContext('2d');
+    const cap = document.getElementById('turtleCaption');
+    let animId = null;
+
+    const drawShape = (type) => {
+      cancelAnimationFrame(animId);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#2563EB';
+      ctx.lineCap = 'round';
+
+      if (type === 'arc') {
+        let prog = 0;
+        cap.textContent = 'turtle.circle(50, 180) → 半径 50、180° 半圆弧';
+        const step = () => {
+          prog = Math.min(1, prog + 0.04);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.beginPath();
+          ctx.arc(140, 80, 48, Math.PI/2, Math.PI/2 - Math.PI * prog, true);
+          ctx.stroke();
+          if (prog < 1) animId = requestAnimationFrame(step);
+        };
+        step();
+        return;
+      }
+
+      let pts = [];
+      if (type === 'tri') {
+        pts = [[95, 118], [185, 118], [140, 40], [95, 118]];
+        cap.textContent = 'forward(a) + left(120) × 3 → 等边三角形';
+      } else if (type === 'sq') {
+        pts = [[100, 115], [180, 115], [180, 35], [100, 35], [100, 115]];
+        cap.textContent = 'forward(a) + left(90) × 4 → 正方形';
+      } else {
+        pts = [[85, 110], [195, 110], [195, 45], [85, 45], [85, 110]];
+        cap.textContent = '交替 forward(60)/forward(50) + left(90) → 长方形';
+      }
+
+      let seg = 0, t = 0;
+      const step = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 0; i < seg; i++) ctx.lineTo(pts[i+1][0], pts[i+1][1]);
+        const x = pts[seg][0] + (pts[seg+1][0] - pts[seg][0]) * t;
+        const y = pts[seg][1] + (pts[seg+1][1] - pts[seg][1]) * t;
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        // Little turtle dot
+        ctx.fillStyle = '#059669';
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+        t += 0.08;
+        if (t >= 1) { t = 0; seg++; }
+        if (seg < pts.length - 1) animId = requestAnimationFrame(step);
+      };
+      step();
+    };
+    document.querySelectorAll('.t-btn').forEach(b => {
+      b.addEventListener('click', () => drawShape(b.dataset.turtle));
+    });
+    drawShape('tri');
+  }
+}
+
+// ==================== RENDER PAGE ====================
+function renderPage() {
+  const p = PAGES[state.idx];
+  const stage = document.getElementById('stage');
+
+  // Update header
+  document.getElementById('topPagePill').textContent = `${state.idx + 1}/${PAGES.length}`;
+  document.getElementById('topChapterLabel').textContent = p.chName;
+  document.getElementById('topProgressBar').style.width = `${Math.round(((state.idx + 1) / PAGES.length) * 100)}%`;
+  document.getElementById('masteredCount').textContent = `${state.mastered.length}/22`;
+
+  // Update footer buttons
+  document.getElementById('prevPageBtn').disabled = state.idx === 0;
+  document.getElementById('nextPageBtn').disabled = state.idx === PAGES.length - 1;
+  document.getElementById('nextPageBtn').innerHTML = state.idx === PAGES.length - 1
+    ? '<span>已到末页</span>'
+    : '<span>下一页</span><span>→</span>';
+
+  const masterBtn = document.getElementById('markMasteredBtn');
+  if (p.type === 'kp') {
+    masterBtn.classList.remove('hidden');
+    const isDone = state.mastered.includes(p.id);
+    masterBtn.textContent = isDone ? '✓ 已掌握' : '标记学会';
+    masterBtn.className = 'h-11 px-3.5 rounded-2xl border text-xs font-semibold transition shrink-0 ' +
+      (isDone ? 'bg-emerald-600 text-white border-emerald-600' : 'border-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700');
+  } else {
+    masterBtn.classList.add('hidden');
+  }
+
+  // Render stage content
+  if (p.type === 'cover') {
+    stage.innerHTML = `
+      <div class="slide-enter space-y-5">
+        <div class="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 shadow-md space-y-3">
+          <div class="inline-block px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold">大学计算机（2）专属复习卡</div>
+          <h1 class="text-2xl sm:text-3xl font-bold leading-snug">${p.title}</h1>
+          <p class="text-sm text-blue-100 leading-relaxed">${p.summary}</p>
+          <div class="grid grid-cols-3 gap-2 pt-2">
+            <div class="bg-white/15 rounded-xl p-2.5 text-center">
+              <div class="font-mono-code text-xl font-bold">22</div>
+              <div class="text-[11px] text-blue-100">核心知识点</div>
+            </div>
+            <div class="bg-white/15 rounded-xl p-2.5 text-center">
+              <div class="font-mono-code text-xl font-bold">521</div>
+              <div class="text-[11px] text-blue-100">大纲核心题</div>
+            </div>
+            <div class="bg-white/15 rounded-xl p-2.5 text-center">
+              <div class="font-mono-code text-xl font-bold">29</div>
+              <div class="text-[11px] text-amber-200">黄标超纲题</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+          <div class="font-bold text-slate-900 text-sm">各章考试占比（点击直接跳转）</div>
+          <div class="space-y-2.5">
+            ${[
+              {ch:1, name:'第 1 章 编程基础', n:72, pct:13, idx:1},
+              {ch:2, name:'第 2 章 数据与运算', n:125, pct:23, idx:5},
+              {ch:3, name:'第 3 章 控制结构 ★重点', n:149, pct:27, idx:10},
+              {ch:4, name:'第 4 章 函数与模块 ★重点', n:107, pct:19, idx:15},
+              {ch:5, name:'第 5 章 算法策略', n:60, pct:11, idx:19},
+              {ch:6, name:'第 6 章 图形与绘图', n:37, pct:7, idx:21}
+            ].map(c => `
+              <button type="button" data-jump-idx="${c.idx}" class="cover-jump w-full text-left group">
+                <div class="flex justify-between text-xs font-medium mb-1">
+                  <span class="text-slate-800 group-hover:text-blue-600">${c.name}</span>
+                  <span class="font-mono-code text-slate-500">${c.n} 题 (${c.pct}%)</span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-blue-600 rounded-full" style="width:${Math.round(c.n/149*100)}%"></div>
+                </div>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="text-center text-xs text-slate-400">
+          👆 手机端支持左右滑动翻页，或直接点击下方“下一页”开始学习
+        </div>
+      </div>
+    `;
+    stage.querySelectorAll('.cover-jump').forEach(b => {
+      b.addEventListener('click', () => goPage(Number(b.dataset.jumpIdx)));
+    });
+  }
+  else if (p.type === 'cheatsheet') {
+    stage.innerHTML = `
+      <div class="slide-enter space-y-4">
+        <div class="space-y-1">
+          <span class="inline-block px-2.5 py-0.5 rounded-lg bg-blue-100 text-blue-800 font-mono-code text-xs font-bold">考前冲刺</span>
+          <h2 class="text-xl font-bold text-slate-900">${p.title}</h2>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5 text-xs sm:text-sm">
+          <div class="font-bold text-slate-900">1. 运算符优先级（从高到低）</div>
+          <div class="font-mono-code bg-slate-900 text-slate-100 rounded-xl p-3 leading-relaxed">
+            **  >  * / // %  >  + -  >  &lt; &lt;= &gt; &gt;= == !=  >  not  >  and  >  or  >  = += *=
+          </div>
+          <p class="text-slate-600 text-xs">记住：<code>x *= a + b</code> 等价 <code>x = x * (a + b)</code>；<code>3.0 // 2 == 1.0</code>。</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-2 text-xs sm:text-sm">
+          <div class="font-bold text-slate-900">2. 四大容器速记</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-mono-code font-bold text-blue-700">str 不可变</div>
+              <div class="text-xs text-slate-600 mt-0.5">切片 <code>[::-1]</code>、<code>format()</code>、空格算长度</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-mono-code font-bold text-emerald-700">list 可变</div>
+              <div class="text-xs text-slate-600 mt-0.5"><code>append/insert/remove</code>、共享引用</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-mono-code font-bold text-violet-700">tuple 不可变</div>
+              <div class="text-xs text-slate-600 mt-0.5">单元素加逗号 <code>(3,)</code>、可做字典键</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-mono-code font-bold text-amber-700">dict 可变</div>
+              <div class="text-xs text-slate-600 mt-0.5">空字典 <code>{}</code>、重复键后覆盖前</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-2 text-xs sm:text-sm">
+          <div class="font-bold text-slate-900">3. 经典算法对号入座</div>
+          <ul class="space-y-1.5 text-xs text-slate-700">
+            <li>• <b>枚举法：</b>百钱买百鸡、密码锁 000–999、求倍数</li>
+            <li>• <b>递推法：</b>猴子吃桃 <code>x=(x+1)*2</code>、按月逆推体重</li>
+            <li>• <b>递归法：</b>汉诺塔、阶乘 <code>fact</code>、斐波那契 <code>fib</code>（最大深度 1000）</li>
+            <li>• <b>分治法：</b>试卷分三份同时查找</li>
+          </ul>
+        </div>
+
+        <div class="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-center space-y-1">
+          <div class="font-bold text-emerald-800 text-sm">全书 22 个考点已浏览完毕！</div>
+          <div class="text-xs text-emerald-700">现在打开配套的《Python 刷题网站》检验成果吧。</div>
+        </div>
+      </div>
+    `;
+  }
+  else {
+    // KP PAGE
+    const answeredIdx = state.quizAns[p.id];
+    const hasAnswered = answeredIdx !== undefined;
+
+    stage.innerHTML = `
+      <div class="slide-enter space-y-4">
+        <!-- Header -->
+        <div>
+          <div class="flex flex-wrap items-center gap-2 mb-1.5">
+            <span class="px-2.5 py-0.5 rounded-lg bg-blue-600 text-white font-mono-code text-xs font-bold">考点 ${p.id}</span>
+            <span class="px-2 py-0.5 rounded-lg bg-slate-200/80 text-slate-700 font-mono-code text-xs">题库 ${p.count} 题</span>
+            ${p.oos > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800 text-xs font-semibold">含超纲 ${p.oos} 题</span>` : ''}
+          </div>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900 leading-snug">${p.title}</h2>
+        </div>
+
+        <!-- Core Points Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-2.5 shadow-xs">
+          <div class="text-xs font-bold text-blue-700">核心要点</div>
+          <ul class="space-y-2 text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+            ${p.core.map(line => `<li class="flex gap-2"><span class="text-blue-500 font-bold">•</span><span>${line}</span></li>`).join('')}
+          </ul>
+          ${p.code ? `<pre class="font-mono-code text-xs sm:text-[13px] bg-slate-900 text-slate-100 rounded-xl p-3.5 mt-2 overflow-x-auto leading-relaxed">${escapeHtml(p.code)}</pre>` : ''}
+        </div>
+
+        <!-- Optional Interactive Mini-Lab -->
+        ${p.lab ? renderLabHtml(p.lab) : ''}
+
+        <!-- Interactive Flip Cards for Traps -->
+        ${p.traps && p.traps.length ? `
+          <div class="space-y-2">
+            <div class="text-xs font-bold text-amber-800 px-1">🔥 高频避坑翻卡（点击卡片看答案）</div>
+            <div class="space-y-2">
+              ${p.traps.map((t, ti) => `
+                <div class="flip-card rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5" data-trap-idx="${ti}">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="text-sm font-semibold text-slate-900">❓ ${escapeHtml(t.q)}</div>
+                    <span class="trap-badge shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-900">点击揭晓</span>
+                  </div>
+                  <div class="trap-ans hidden mt-2.5 pt-2.5 border-t border-amber-200/80 text-xs sm:text-sm text-amber-950 font-medium leading-relaxed">
+                    💡 ${escapeHtml(t.a)}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Interactive Micro-Quiz -->
+        <div class="bg-white rounded-2xl border-2 border-blue-100 p-4 sm:p-5 space-y-3 shadow-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-blue-700">✏️ 随堂一题检验（做对自动标记已掌握）</span>
+          </div>
+          <div class="text-sm sm:text-base font-semibold text-slate-900">${escapeHtml(p.quiz.q)}</div>
+          <div class="space-y-2">
+            ${p.quiz.opts.map((opt, oi) => {
+              const letters = ['A','B','C','D'];
+              let cls = 'quiz-opt w-full text-left px-3.5 py-2.5 rounded-xl border text-sm flex items-center gap-2.5 transition ';
+              if (hasAnswered) {
+                if (oi === p.quiz.ans) cls += 'border-emerald-500 bg-emerald-50 text-emerald-950 font-semibold';
+                else if (oi === answeredIdx) cls += 'border-rose-500 bg-rose-50 text-rose-900';
+                else cls += 'border-slate-200 bg-white text-slate-400';
+              } else {
+                cls += 'border-slate-200 bg-slate-50/60 hover:border-blue-400 hover:bg-blue-50 text-slate-800';
+              }
+              return `<button type="button" data-q-opt="${oi}" class="${cls}">
+                <span class="w-6 h-6 rounded-lg font-mono-code text-xs font-bold flex items-center justify-center shrink-0 ${hasAnswered && oi === p.quiz.ans ? 'bg-emerald-600 text-white' : hasAnswered && oi === answeredIdx ? 'bg-rose-600 text-white' : 'bg-white border border-slate-200 text-slate-700'}">${letters[oi]}</span>
+                <span>${escapeHtml(opt)}</span>
+              </button>`;
+            }).join('')}
+          </div>
+          ${hasAnswered ? `
+            <div class="rounded-xl p-3 text-xs sm:text-sm leading-relaxed ${answeredIdx === p.quiz.ans ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' : 'bg-rose-50 text-rose-900 border border-rose-200'}">
+              <b>${answeredIdx === p.quiz.ans ? '✓ 答对啦！' : '✗ 再看看：'}</b>${escapeHtml(p.quiz.exp)}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    // Bind flip cards
+    stage.querySelectorAll('.flip-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const ans = card.querySelector('.trap-ans');
+        const badge = card.querySelector('.trap-badge');
+        const opened = !ans.classList.contains('hidden');
+        ans.classList.toggle('hidden');
+        badge.textContent = opened ? '点击揭晓' : '已展开';
+      });
+    });
+
+    // Bind micro-quiz
+    stage.querySelectorAll('.quiz-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const oi = Number(btn.dataset.qOpt);
+        state.quizAns[p.id] = oi;
+        if (oi === p.quiz.ans && !state.mastered.includes(p.id)) {
+          state.mastered.push(p.id);
+        }
+        saveState();
+        renderPage();
+      });
+    });
+
+    // Bind interactive lab
+    if (p.lab) bindLabEvents(p.lab);
+  }
+
+  stage.scrollTop = 0;
+  renderDrawerList();
+}
+
+function goPage(newIdx) {
+  if (newIdx < 0 || newIdx >= PAGES.length) return;
+  state.idx = newIdx;
+  saveState();
+  renderPage();
+}
+
+function renderDrawerList() {
+  const list = document.getElementById('drawerList');
+  list.innerHTML = PAGES.map((p, i) => {
+    const active = i === state.idx;
+    const done = p.type === 'kp' && state.mastered.includes(p.id);
+    return `
+      <button type="button" data-drawer-idx="${i}" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 text-xs sm:text-sm transition ${active ? 'bg-blue-600 text-white font-semibold' : 'hover:bg-slate-100 text-slate-700'}">
+        <div class="flex items-center gap-2 truncate">
+          <span class="font-mono-code text-[11px] px-1.5 py-0.5 rounded ${active ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-600'}">${p.type === 'cover' ? '导览' : p.id}</span>
+          <span class="truncate">${escapeHtml(p.title)}</span>
+        </div>
+        ${done ? `<span class="${active ? 'text-emerald-200' : 'text-emerald-600'} font-bold shrink-0">✓</span>` : ''}
+      </button>
+    `;
+  }).join('');
+  list.querySelectorAll('[data-drawer-idx]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.getElementById('drawerBackdrop').classList.add('hidden');
+      goPage(Number(b.dataset.drawerIdx));
+    });
+  });
+}
+
+// ==================== CONTROLS & SWIPE ====================
+document.getElementById('prevPageBtn').addEventListener('click', () => goPage(state.idx - 1));
+document.getElementById('nextPageBtn').addEventListener('click', () => goPage(state.idx + 1));
+
+document.getElementById('markMasteredBtn').addEventListener('click', () => {
+  const p = PAGES[state.idx];
+  if (p.type !== 'kp') return;
+  if (state.mastered.includes(p.id)) {
+    state.mastered = state.mastered.filter(x => x !== p.id);
+  } else {
+    state.mastered.push(p.id);
+  }
+  saveState();
+  renderPage();
+});
+
+document.getElementById('openDrawerBtn').addEventListener('click', () => {
+  renderDrawerList();
+  document.getElementById('drawerBackdrop').classList.remove('hidden');
+});
+document.getElementById('closeDrawerBtn').addEventListener('click', () => {
+  document.getElementById('drawerBackdrop').classList.add('hidden');
+});
+document.getElementById('drawerCloseArea').addEventListener('click', () => {
+  document.getElementById('drawerBackdrop').classList.add('hidden');
+});
+
+// Touch Swipe Left/Right for Mobile
+let touchStartX = 0, touchStartY = 0;
+const stageEl = document.getElementById('stage');
+stageEl.addEventListener('touchstart', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'CANVAS') return;
+  touchStartX = e.changedTouches[0].screenX;
+  touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
+stageEl.addEventListener('touchend', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'CANVAS') return;
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  const dy = e.changedTouches[0].screenY - touchStartY;
+  if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+    if (dx < 0) goPage(state.idx + 1);
+    else goPage(state.idx - 1);
+  }
+}, { passive: true });
+
+// Keyboard Left/Right
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowLeft') goPage(state.idx - 1);
+  else if (e.key === 'ArrowRight') goPage(state.idx + 1);
+});
+
+loadState();
+renderPage();
+</script>
+</body>
+</html>
